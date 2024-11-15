@@ -1,11 +1,11 @@
 # %% [markdown]
-# # Examen Práctico 
+# # Examen Práctico
 
 # %% [markdown]
 # #### 3670 COM:01-3900 | Ciencia de datos | 2024 C2
 
 # %% [markdown]
-# Alumnos: Martin Lecuona, Rojas Tomas
+# Alumnos: Martin Lecuona, Rojas Tomas, Alejo Agasi, Stefania Violi, Julian Castellana
 
 # %% [markdown]
 # ## Enunciado
@@ -37,26 +37,26 @@
 # ## Como desarrollar el exámen
 
 # %% [markdown]
-# A partir del dataset realice todas las acciones para poder llegar al mejor modelo, explique brevemente en los fundamentos de sus transformaciones o acciones en general. 
+# A partir del dataset realice todas las acciones para poder llegar al mejor modelo, explique brevemente en los fundamentos de sus transformaciones o acciones en general.
 
 # %% [markdown]
 # La nota derivará de: </BR>
 # 1.La calidad de la clasificación realizada</BR>
 # 2.La fundamentación de los pasos realizados</BR>
-# 3.Lo sencillo de llevar a producción el desarrollo</BR> 
-# 
-# 
+# 3.Lo sencillo de llevar a producción el desarrollo</BR>
+#
+#
 
 # %% [markdown]
-# Los docentes evaluaran su clasificador utilizando un conjunto de datos del dataset "fuera de la caja" (out of the box, al que usted no tiene acceso). Para minimizar la posible diferencia entre su medición y la medición del docente, recuerde y aplique conceptos de test, validación cruzada y evite los errores comunes de sesgo de selección y fuga de datos. Ej: "10. Common pitfalls and recommended practices" disponible en "https://scikit-learn.org/stable/common_pitfalls.html"   
+# Los docentes evaluaran su clasificador utilizando un conjunto de datos del dataset "fuera de la caja" (out of the box, al que usted no tiene acceso). Para minimizar la posible diferencia entre su medición y la medición del docente, recuerde y aplique conceptos de test, validación cruzada y evite los errores comunes de sesgo de selección y fuga de datos. Ej: "10. Common pitfalls and recommended practices" disponible en "https://scikit-learn.org/stable/common_pitfalls.html"
 
 # %% [markdown]
 # Al final del notebook encontrará un bloque de código que lee la muestra adicional (a la que usted no tiene acceso) si EVALUACION==True, en caso contrario solo lee una submuestra del conjunto original para validar que el código funciona. Desarrolle el notebook como considere, para finalmente asignar el mejor clasificador que usted haya obtenido remplazando en f_clf = None, None por su clasificador. Implemente todas las transformaciones entre esa línea y la predición final (Evitando al fuga de datos).Puede dejar funcionando implementaciones alternativas que no prosperaron en notebooks separados. En cuanto comience con el desarrollo informe a los docentes el nombre del repositorio.
-# 
+#
 
 # %%
 STUDENTDATAFILE = 'creditos_banco_alumnos.csv'
-EVALDATAFILE    = 'creditos_banco_evaluacion.csv'
+EVALDATAFILE = 'creditos_banco_evaluacion.csv'
 import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -68,10 +68,35 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 # %%
 df = pd.read_csv(STUDENTDATAFILE)
 df.head()
+
+# %% [markdown]
+# # Matriz de Correlación Variables Numéricas
+
+# %%
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Seleccionar solo las columnas numéricas
+df_numerico = df.select_dtypes(include=['float64', 'int64'])
+
+# Calcular la matriz de correlación
+correlacion = df_numerico.corr()
+
+# # Mostrar la matriz de correlación
+# print(correlacion)
+
+# Visualizar la matriz de correlación con un mapa de calor
+plt.figure(figsize=(8, 6))
+sns.heatmap(correlacion, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Matriz de Correlación de Variables Numéricas')
+plt.show()
+
+# %% [markdown]
+# Al analizar la matriz, podemos observar que las correlaciones más fuertes están en torno a 0.5 en valor absoluto, representando una correlación moderada. Es por ello que consideramos que no será necesario dropear ninguna de estas variables. (Esto fue debidamente probado y es por ello que se llegó a dicha conclusión))
 
 # %% [markdown]
 # # Etapa de preprocesamiento #
@@ -85,7 +110,7 @@ df.head()
 
 # %%
 #Verificamos valores nulos
-print(df.isnull().sum()/len(df)*100)
+print(df.isnull().sum() / len(df) * 100)
 # No se encontraron valores nulos en las columnas, por lo tanto no imputamos
 
 # %% [markdown]
@@ -99,38 +124,6 @@ print(df.describe())
 print("\nResumen de estadísticas categóricas:")
 print(df.describe(include=['object']))
 
-#Pasamos a numéricas
-
-# %% [markdown]
-# #### Convertimos a numéricos las columnas:
-# Tratamientos a realizar en cada columna Label encoding ya que unicamente puede tomar un tipo de valor
-# 1. Objetivo
-# 2. Default
-# 3. EsPropietario
-
-# %%
-# import pandas as pd
-# from sklearn.preprocessing import LabelEncoder
-
-
-# # Inicializamos los codificadores
-# label_encoder_objetivo = LabelEncoder()
-# label_encoder_default = LabelEncoder()
-# label_encoder_propietario = LabelEncoder()
-
-# # Codificamos y actualizamos la columna 'Objetivo'
-# df['Objetivo'] = label_encoder_objetivo.fit_transform(df['Objetivo'])
-
-# # Codificamos y actualizamos la columna 'default'
-# df['Default'] = label_encoder_default.fit_transform(df['Default'])
-
-# # Codificamos y actualizamos la columna 'esPropietario'
-# df['esPropietario'] = label_encoder_propietario.fit_transform(df['esPropietario'])
-
-# print(df[['Objetivo', 'Default', 'esPropietario']].head())
-
-
-
 # %% [markdown]
 # #### Analizamos posibles outliers con Boxplot
 
@@ -139,15 +132,14 @@ print(df.describe(include=['object']))
 numeric_columns = df.select_dtypes(include=np.number).columns
 
 # Número de columnas numéricas
-n = len(numeric_columns)  
+n = len(numeric_columns)
 
 # Ajustar el tamaño
-plt.figure(figsize=(4 * n, 6))  
-
+plt.figure(figsize=(4 * n, 6))
 
 for i, column in enumerate(numeric_columns):
-    plt.subplot(1, n, i + 1) 
-    plt.boxplot(df[column].dropna())  # Evitar NaN en el boxplot 
+    plt.subplot(1, n, i + 1)
+    plt.boxplot(df[column].dropna())  # Evitar NaN en el boxplot
     plt.title(f'Boxplot de {column}')
     plt.ylabel(column)
 
@@ -155,38 +147,48 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# #### Detectamos outliers, por lo que intentamos limpiarlos usando IQR
+# #### Detectamos outliers, por lo que se los convertirá en nulos para luego imputarlos
 
 # %%
-#Seleccionamos columnas numéricas
-df_numeric = df.select_dtypes(include=np.number)
+# Seleccionamos columnas numéricas y eliminamos las binarias
+numeric_columns = [
+    col for col in df.select_dtypes(include=np.number).columns
+    if col not in ["FueVeraz", "TuvoEmbargo"]
+]
 
-#Elimanos columnas "binarias"
+# Mostrar las columnas restantes
+print(numeric_columns)
 
-df_numeric.drop(columns=["FueVeraz"], inplace=True)
-df_numeric.drop(columns=["TuvoEmbargo"], inplace=True)
 
-#Primer cuartil (Q1)
-Q1 = df_numeric.quantile(0.25)  
+# %%
+# Función para identificar outliers usando el rango intercuartílico (IQR)
+def reemplazar_outliers_por_nulos(df, columnas):
+    for columna in columnas:
+        # Calcula el IQR (Q3 - Q1)
+        Q1 = df[columna].quantile(0.25)
+        Q3 = df[columna].quantile(0.75)
+        IQR = Q3 - Q1
+        limite_inferior = Q1 - 1.5 * IQR
+        limite_superior = Q3 + 1.5 * IQR
 
-#Tercer cuartil (Q3)
-Q3 = df_numeric.quantile(0.75)  
+        # Reemplaza los outliers por NaN
+        df[columna] = df[columna].apply(lambda x: np.nan if (
+            x < limite_inferior or x > limite_superior) else x)
 
-#Rango intercuartil
-IQR = Q3 - Q1  
 
-#Definimos los límites inferior y superior
-lower_bound = Q1 - 1.5 * IQR
-upper_bound = Q3 + 1.5 * IQR
+# Reemplazar outliers en las columnas especificadas
+reemplazar_outliers_por_nulos(df, numeric_columns)
 
-#Filtramos los datos y actualizamos el dataFrame. "~ Lo utilizamos para tomar los datos que deberiamos eliminar"
-mask = ~((df_numeric < lower_bound) | (df_numeric > upper_bound)).any(axis=1)
+# %%
+#Verificamos valores nulos
+print(df.isnull().sum() / len(df) * 100)
 
-# Filtrar el DataFrame original usando la máscara y asignarlo de nuevo a df
-df = df[mask].reset_index(drop=True)
+# %%
+# Filtrar las filas que tienen al menos un valor nulo
+filas_con_nulos = df[df.isnull().any(axis=1)]
 
-#Verificamos que se hayan eliminado los outliers
-print(df.head())
+# Mostrar las filas que tienen valores nulos
+print(filas_con_nulos)
 
 # %% [markdown]
 # #### Volvemos a ver el Boxplot
@@ -196,21 +198,19 @@ print(df.head())
 numeric_columns = df.select_dtypes(include=np.number).columns
 
 # Número de columnas numéricas
-n = len(numeric_columns)  
+n = len(numeric_columns)
 
 # Ajustar el tamaño
-plt.figure(figsize=(4 * n, 6))  
-
+plt.figure(figsize=(4 * n, 6))
 
 for i, column in enumerate(numeric_columns):
-    plt.subplot(1, n, i + 1) 
-    plt.boxplot(df[column].dropna())  # Evitar NaN en el boxplot 
+    plt.subplot(1, n, i + 1)
+    plt.boxplot(df[column].dropna())  # Evitar NaN en el boxplot
     plt.title(f'Boxplot de {column}')
     plt.ylabel(column)
 
 plt.tight_layout()
 plt.show()
-
 
 # %% [markdown]
 # #### Se visualizan los datos con una distribución más equilibrada
@@ -234,40 +234,33 @@ print(balance_proportions)
 
 # %% [markdown]
 # #### Se puede ver que se encuentra balanceada la variable objetivo
-# 
-# #### Realizamos una matriz de correlación para comprender como se relacionan las columnas de df
+
+# %% [markdown]
+# # Split
 
 # %%
-# Calcular la matriz de correlación
-# correlation_matrix = df.corr()
-
-# correlation_matrix = df.corr()
-
-# # Visualizar la matriz de correlación
-# plt.figure(figsize=(10, 8))
-# plt.imshow(correlation_matrix, cmap='coolwarm', interpolation='nearest')
-# plt.colorbar()
-# plt.xticks(range(len(correlation_matrix.columns)), correlation_matrix.columns, rotation=45)
-# plt.yticks(range(len(correlation_matrix.columns)), correlation_matrix.columns)
-# plt.title("Matriz de Correlación")
-# plt.tight_layout()
-# plt.show()
-
-
-
-# %%
-# df['Default'] = df['Default'].replace({'paid off': 0, 'default': 1})
-
-# %%
-
-
-from sklearn.discriminant_analysis import StandardScaler
-from sklearn.preprocessing import MinMaxScaler, OneHotEncoder
+from sklearn.model_selection import train_test_split
 
 X = df.drop(['Default'], axis=1)
 y = df['Default']
 
 df = X
+
+X_train, X_test, y_train, y_test = train_test_split(X,
+                                                    y,
+                                                    stratify=y,
+                                                    test_size=0.2,
+                                                    random_state=42)
+
+# %% [markdown]
+# # Column Transformer (dentro de Pipeline)
+
+# %% [markdown]
+# Primero armamos un pipeline para features numericas y otro para features categoricas, que contendran las transformaciones correspondientes como imputaciones y normalizaciones. Luego estos pipelines se agruparan en un column transformer
+
+# %%
+from sklearn.discriminant_analysis import StandardScaler
+from sklearn.preprocessing import OneHotEncoder
 
 numerical_features = df.select_dtypes(include=np.number).columns
 categorical_features = df.select_dtypes(exclude=np.number).columns
@@ -276,108 +269,165 @@ print(numerical_features)
 print("----------")
 print(categorical_features)
 
+numerical_transformer = Pipeline(
+    steps=[('imputer',
+            SimpleImputer(strategy='mean')), ('scaler', StandardScaler())])
 
-# numerical_transformer = Pipeline(steps=[
-#     ('imputer', SimpleImputer(strategy='mean')),
-#     ('scaler', StandardScaler())
-# ])
-numerical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='mean')),
-    ('scaler', MinMaxScaler())
-])
-categorical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('onehot', OneHotEncoder(handle_unknown='ignore')) 
-])
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', numerical_transformer, numerical_features),
-        ('cat', categorical_transformer, categorical_features)
-    ])
+categorical_transformer = Pipeline(
+    steps=[('imputer', SimpleImputer(strategy='most_frequent')
+            ), ('onehot', OneHotEncoder(handle_unknown='ignore'))])
+preprocessor = ColumnTransformer(transformers=[(
+    'num', numerical_transformer,
+    numerical_features), ('cat', categorical_transformer,
+                          categorical_features)])
+
+# %% [markdown]
+# Ese column transformer se integrara al pipeline definitivo con su correspondiente clasificador
+
+# %% [markdown]
+# # PIPELINES KNN Y RANDOM FOREST
 
 # %%
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
-pipeline_knn = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('classifier', KNeighborsClassifier())
-])
-pipeline_rf = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('classifier', RandomForestClassifier(n_estimators=100, random_state=42,class_weight="balanced"))
-])
 
-
-# %%
-from sklearn.model_selection import train_test_split
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
+pipeline_knn = Pipeline(
+    steps=[('preprocessor',
+            preprocessor), ('classifier', KNeighborsClassifier())])
+pipeline_rf = Pipeline(
+    steps=[('preprocessor', preprocessor),
+           ('classifier',
+            RandomForestClassifier(
+                n_estimators=100, random_state=42, class_weight="balanced"))])
 
 # %%
-from sklearn.metrics import classification_report
+from sklearn.model_selection import cross_val_score
+
+print("KNN")
+scores_knn = cross_val_score(pipeline_knn,
+                             X_train,
+                             y_train,
+                             cv=5,
+                             scoring='accuracy')
+print("Puntuaciones en cada fold:", scores_knn)
+print("Precisión promedio con validación cruzada:", scores_knn.mean())
+
 # Entrenamos el modelo
 pipeline_knn.fit(X_train, y_train)
-pipeline_rf.fit(X_train, y_train)
-
-# Evaluación
-from sklearn.metrics import accuracy_score
-
 y_pred_knn = pipeline_knn.predict(X_test)
-accuracy_knn = accuracy_score(y_test, y_pred_knn)
+
+#############################################
+
+print("RANDOM FOREST")
+scores_rf = cross_val_score(pipeline_rf,
+                            X_train,
+                            y_train,
+                            cv=5,
+                            scoring='accuracy')
+print("Puntuaciones en cada fold:", scores_rf)
+print("Precisión promedio con validación cruzada:", scores_rf.mean())
+
+pipeline_rf.fit(X_train, y_train)
 y_pred_rf = pipeline_rf.predict(X_test)
-accuracy_rf = accuracy_score(y_test, y_pred_rf)
 
 # %% [markdown]
-# # Mejor Knn
+# # Pipeline Mejor Knn
 
 # %%
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 
+pipeline_knn_best = Pipeline(
+    steps=[('preprocessor',
+            preprocessor), ('classifier', KNeighborsClassifier())])
 
 param_grid = {
-    'classifier__n_neighbors': [3, 5, 7, 9, 11, 15, 20], 
-    'classifier__weights': ['uniform', 'distance'],        
-    'classifier__metric': ['euclidean', 'manhattan', 'minkowski']  
+    'classifier__n_neighbors': [3, 5, 7, 9, 11, 15, 20],
+    'classifier__weights': ['uniform', 'distance'],
+    'classifier__metric': ['euclidean', 'manhattan', 'minkowski']
 }
-
-pipeline_knn_best = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('classifier', KNeighborsClassifier())
-])
-
 
 # Configuramos GridSearchCV
 grid_search = GridSearchCV(
-    estimator=pipeline_knn,
+    estimator=pipeline_knn_best,
     param_grid=param_grid,
-    cv=5,               # Validación cruzada con 5 folds
+    cv=5,  # Validación cruzada con 5 folds
     scoring='accuracy',  # Métrica de evaluación
-    n_jobs=-1            # Usar todos los núcleos disponibles
+    n_jobs=-1  # Usar todos los núcleos disponibles
 )
 
 grid_search.fit(X_train, y_train)
+y_pred_knn_best = grid_search.predict(X_test)
+pipeline_knn_best = grid_search.best_estimator_
 
-print("Mejores hiperparámetros:", grid_search.best_params_)
+print("\nKNN - Mejor Estimador:")
+pipeline_knn_best
 
-y_pred_optimized = grid_search.predict(X_test)
-accuracy_optimized = accuracy_score(y_test, y_pred_optimized)
+# %% [markdown]
+# # Pipeline Mejor Random Forest
 
 # %%
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import RandomizedSearchCV
+
+pipeline_rf_best = Pipeline(
+    steps=[('preprocessor', preprocessor),
+           ('classifier',
+            RandomForestClassifier(random_state=42, class_weight="balanced"))])
+
+# Definir la cuadrícula de parámetros sin 'log_loss' y sin n_estimators en el clasificador inicial
+param_grid_rf = {
+    'classifier__criterion': ['gini', 'entropy'],
+    'classifier__max_depth': [3, 4, 5, 6, 7, 8],
+    'classifier__min_samples_split': [2, 4, 8, 10, 12, 14],
+    'classifier__min_samples_leaf': [2, 4, 6, 8, 10],
+    'classifier__max_features': ["sqrt", "log2", None],
+    'classifier__n_estimators': [30, 60, 90, 120, 150, 180]
+}
+
+rand_search = RandomizedSearchCV(estimator=pipeline_rf_best,
+                                 param_distributions=param_grid_rf,
+                                 n_iter=50,
+                                 cv=5,
+                                 scoring='accuracy',
+                                 random_state=42,
+                                 n_jobs=-1)
+
+rand_search.fit(X_train, y_train)
+y_pred_rf_best = rand_search.predict(X_test)
+pipeline_rf_best = rand_search.best_estimator_
+
+print("\nRandom Forest - Mejor Estimador:")
+pipeline_rf_best
+
+# %% [markdown]
+# ## Métricas Obtenidas
+
+# %%
+from sklearn.metrics import classification_report
+
 print("KNN")
 print(classification_report(y_test, y_pred_knn))
+
 print("RANDOM FOREST")
 print(classification_report(y_test, y_pred_rf))
+
 print("MEJOR KNN")
-print(classification_report(y_test, y_pred_optimized))
+print(classification_report(y_test, y_pred_knn_best))
+
+print("MEJOR RANDOM FOREST")
+print(classification_report(y_test, y_pred_rf_best))
+
+# %% [markdown]
+# # Testing Final
 
 # %%
 EVALUACION = False
-best_clf = pipeline_rf #Asignar aqui el mejor clasificador posible (previamente entrenado)
-#best_clf = pl
+best_clf = pipeline_rf_best  #Asignar aqui el mejor clasificador posible (previamente entrenado)
+
 #Leemos el dataset de evaluación, simulando producción
-if EVALUACION==False:
+if EVALUACION == False:
     df = pd.read_csv(STUDENTDATAFILE)
     _, df = train_test_split(df, test_size=0.3, random_state=42)
 else:
@@ -388,8 +438,5 @@ X_Eval = df.drop("Default", axis=1)
 y_Eval = df["Default"]
 
 #Evaluación final
-
-y_pred = best_clf.predict(X_Eval) # esto debe ser un pipeline completo
+y_pred = best_clf.predict(X_Eval)  # esto debe ser un pipeline completo
 print(classification_report(y_Eval, y_pred))
-
-
